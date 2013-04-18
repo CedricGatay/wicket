@@ -16,19 +16,6 @@
  */
 package org.apache.wicket.protocol.http;
 
-import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
-
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-
 import org.apache.wicket.ThreadContext;
 import org.apache.wicket.WicketRuntimeException;
 import org.apache.wicket.request.cycle.RequestCycle;
@@ -40,6 +27,18 @@ import org.apache.wicket.util.string.Strings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.Filter;
+import javax.servlet.FilterChain;
+import javax.servlet.FilterConfig;
+import javax.servlet.ServletException;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.io.IOException;
+import java.util.HashSet;
+import java.util.Set;
+
 /**
  * Filter for initiating handling of Wicket requests.
  * <p>
@@ -48,9 +47,9 @@ import org.slf4j.LoggerFactory;
  * foo.gif the filter can choose not to process it because it knows it is not a wicket-related
  * request. Since the filter didn't process it, it falls on to the application server to try, and
  * then it works."
- * 
+ *
  * @see WicketServlet for documentation
- * 
+ *
  * @author Jonathan Locke
  * @author Timur Mehrvarz
  * @author Juergen Donnerstag
@@ -108,7 +107,7 @@ public class WicketFilter implements Filter
 	 * <p/>
 	 * this can be useful for programmatically creating and appending the wicket filter to the
 	 * servlet context using servlet 3 features.
-	 * 
+	 *
 	 * @param application
 	 *            web application
 	 */
@@ -127,7 +126,7 @@ public class WicketFilter implements Filter
 
 	/**
 	 * This is Wicket's main method to execute a request
-	 * 
+	 *
 	 * @param request
 	 * @param response
 	 * @param chain
@@ -239,7 +238,7 @@ public class WicketFilter implements Filter
 
 	/**
 	 * Process the request cycle
-	 * 
+	 *
 	 * @param requestCycle
 	 * @param webResponse
 	 * @param httpServletRequest
@@ -284,12 +283,12 @@ public class WicketFilter implements Filter
 
 	/**
 	 * Creates the web application factory instance.
-	 * 
+	 *
 	 * If no APP_FACT_PARAM is specified in web.xml ContextParamWebApplicationFactory will be used
 	 * by default.
-	 * 
+	 *
 	 * @see ContextParamWebApplicationFactory
-	 * 
+	 *
 	 * @return application factory instance
 	 */
 	protected IWebApplicationFactory getApplicationFactory()
@@ -342,7 +341,7 @@ public class WicketFilter implements Filter
 
 	/**
 	 * If you do have a need to subclass, you may subclass {@link #init(boolean, FilterConfig)}
-	 * 
+	 *
 	 * @see javax.servlet.Filter#init(javax.servlet.FilterConfig)
 	 */
 	@Override
@@ -354,9 +353,9 @@ public class WicketFilter implements Filter
 	/**
 	 * Servlets and Filters are treated essentially the same with Wicket. This is the entry point
 	 * for both of them.
-	 * 
+	 *
 	 * @see #init(FilterConfig)
-	 * 
+	 *
 	 * @param isServlet
 	 *            True if Servlet, false if Filter
 	 * @param filterConfig
@@ -426,6 +425,20 @@ public class WicketFilter implements Filter
 				// Give the application the option to log that it is started
 				application.logStarted();
 			}
+            catch (Exception e)
+            {
+                log.debug("[WICKET-5146] Resetting application reference");
+                try
+                {
+                    application.internalDestroy();
+                }
+                catch (Exception innerE)
+                {
+                    log.error("[WICKET-5146] Unable to destroy application which failed to initialize", innerE);
+                }
+                application = null;
+                throw new ServletException(e);
+            }
 			finally
 			{
 				ThreadContext.detach();
@@ -442,7 +455,7 @@ public class WicketFilter implements Filter
 
 	/**
 	 * Stub method that lets subclasses configure filter path from annotations.
-	 * 
+	 *
 	 * @param isServlet
 	 * @return Filter path from annotation
 	 */
@@ -487,7 +500,7 @@ public class WicketFilter implements Filter
 	}
 
 	/**
-	 * 
+	 *
 	 * @param isServlet
 	 * @param filterConfig
 	 * @return filter path from web.xml
@@ -509,7 +522,7 @@ public class WicketFilter implements Filter
 	/**
 	 * Either get the filterPath retrieved from web.xml, or if not found the old (1.3) way via a
 	 * filter mapping param.
-	 * 
+	 *
 	 * @param request
 	 * @return filterPath
 	 */
@@ -520,7 +533,7 @@ public class WicketFilter implements Filter
 
 	/**
 	 * Provide a standard getter for filterPath.
-	 * 
+	 *
 	 * @return The configured filterPath.
 	 */
 	protected String getFilterPath()
@@ -529,7 +542,7 @@ public class WicketFilter implements Filter
 	}
 
 	/**
-	 * 
+	 *
 	 * @param filterConfig
 	 * @return filter path
 	 */
@@ -584,7 +597,7 @@ public class WicketFilter implements Filter
 
 	/**
 	 * Try to determine as fast as possible if a redirect is necessary
-	 * 
+	 *
 	 * @param request
 	 * @return null, if no redirect is necessary. Else the redirect URL
 	 */
@@ -595,7 +608,7 @@ public class WicketFilter implements Filter
 
 	/**
 	 * Try to determine as fast as possible if a redirect is necessary
-	 * 
+	 *
 	 * @param requestURI
 	 * @param contextPath
 	 * @return null, if no redirect is necessary. Else the redirect URL
@@ -642,10 +655,10 @@ public class WicketFilter implements Filter
 
 	/**
 	 * Sets the filter path instead of reading it from web.xml.
-	 * 
+	 *
 	 * Please note that you must subclass WicketFilter.init(FilterConfig) and set your filter path
 	 * before you call super.init(filterConfig).
-	 * 
+	 *
 	 * @param filterPath
 	 */
 	public final void setFilterPath(String filterPath)
@@ -677,7 +690,7 @@ public class WicketFilter implements Filter
 	/**
 	 * Returns a relative path to the filter path and context root from an HttpServletRequest - use
 	 * this to resolve a Wicket request.
-	 * 
+	 *
 	 * @param request
 	 * @return Path requested, minus query string, context path, and filterPath. Relative, no
 	 *         leading '/'.
@@ -725,7 +738,7 @@ public class WicketFilter implements Filter
 
 	/**
 	 * Checks whether this is a request to an ignored path
-	 * 
+	 *
 	 * @param request
 	 *            the current http request
 	 * @return {@code true} when the request should be ignored, {@code false} - otherwise
@@ -754,7 +767,7 @@ public class WicketFilter implements Filter
 
 	/**
 	 * initializes the ignore paths parameter
-	 * 
+	 *
 	 * @param filterConfig
 	 */
 	private void initIgnorePaths(final FilterConfig filterConfig)
@@ -779,7 +792,7 @@ public class WicketFilter implements Filter
 	 * A filterPath should have all leading slashes removed and exactly one trailing slash. A
 	 * wildcard asterisk character has no special meaning. If your intention is to mean the top
 	 * level "/" then an empty string should be used instead.
-	 * 
+	 *
 	 * @param filterPath
 	 * @return
 	 */
