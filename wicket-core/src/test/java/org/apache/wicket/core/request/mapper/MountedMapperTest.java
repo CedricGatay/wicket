@@ -809,4 +809,51 @@ public class MountedMapperTest extends AbstractMapperTest
 		Url url = optionPlaceholderEncoder.mapHandler(handler);
 		assertEquals("some/path/p2/p3/i1/i2?a=b&b=c", url.toString());
 	}
+
+    /* WICKET-5056 **/
+	@Test
+	public void optionalParameterGetsLowerScore_ThanExactOne() throws Exception
+	{
+        final Url url = Url.parse("all/sindex");
+        final MountedMapper exactMount = new MountedMapper("/all/sindex", MockPage.class);
+        final MountedMapper optionalParameter = new MountedMapper("/all/#{exp}", MockPage.class);
+        final int exactCompatScore = exactMount.getCompatibilityScore(getRequest(url));
+        final int optCompatScore = optionalParameter.getCompatibilityScore(getRequest(url));
+        assertTrue("exactCompatScore should have greater compatibility score than optional one" +
+                   " got exact = " + exactCompatScore + " and optional = " + optCompatScore,
+                   exactCompatScore > optCompatScore);
+    }
+
+    @Test
+    public void exactMountGetsBetterScore_ThanParameterOne() throws Exception {
+        final Url url = Url.parse("all/sindex");
+        final MountedMapper exactMount = new MountedMapper("/all/sindex", MockPage.class);
+        final MountedMapper requiredParam = new MountedMapper("/all/${exp}", MockPage.class);
+        final int exactCompatScore = exactMount.getCompatibilityScore(getRequest(url));
+        final int requiredParamScore = requiredParam.getCompatibilityScore(getRequest(url));
+        assertTrue("exactCompatScore should have greater compatibility score than required one" +
+                   " got exact = " + exactCompatScore + " and required= " + requiredParamScore,
+                   exactCompatScore > requiredParamScore);
+
+    }
+    @Test
+    public void exactMountGetsBetterScore_ThanParameterOne_ThenOptionalOne() throws Exception {
+        final Url url = Url.parse("all/sindex");
+        final MountedMapper exactMount = new MountedMapper("/all/sindex", MockPage.class);
+        final MountedMapper requiredParam = new MountedMapper("/all/${exp}", MockPage.class);
+        final MountedMapper optionalParameter = new MountedMapper("/all/#{exp}", MockPage.class);
+
+        final int exactCompatScore = exactMount.getCompatibilityScore(getRequest(url));
+        final int requiredParamScore = requiredParam.getCompatibilityScore(getRequest(url));
+        final int optCompatScore = optionalParameter.getCompatibilityScore(getRequest(url));
+
+        assertTrue("exactCompatScore should have greater compatibility score than required one" +
+                   " got exact = " + exactCompatScore + " and required= " + requiredParamScore,
+                   exactCompatScore > requiredParamScore);
+        assertTrue("exactCompatScore should have greater compatibility score than optional one" +
+                   " got exact = " + exactCompatScore + " and optional = " + optCompatScore,
+                   requiredParamScore > optCompatScore);
+
+    }
+    
 }
