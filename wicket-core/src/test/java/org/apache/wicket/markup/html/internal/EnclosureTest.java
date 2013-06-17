@@ -25,6 +25,7 @@ import org.apache.wicket.WicketTestCase;
 import org.apache.wicket.authorization.Action;
 import org.apache.wicket.authorization.IAuthorizationStrategy;
 import org.apache.wicket.markup.IMarkupResourceStreamProvider;
+import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.markup.html.basic.Label;
 import org.apache.wicket.markup.html.form.CheckBox;
@@ -37,6 +38,7 @@ import org.apache.wicket.util.resource.StringResourceStream;
 import org.apache.wicket.util.tester.DiffUtil;
 import org.apache.wicket.util.tester.FormTester;
 import org.apache.wicket.util.tester.WicketTester;
+import org.junit.Assert;
 import org.junit.Test;
 
 
@@ -423,4 +425,50 @@ public class EnclosureTest extends WicketTestCase
 
 		tester.assertContainsNot(ChildWithDeeperPathInTransparentContainerPage.LABEL_TEXT);
 	}
+
+    @Test
+    public void visibleEnclosuresAreNotPollutingSiblingsComponentVisibility() throws Exception
+    {
+        try
+        {
+            tester.startPage(new Enclosure_Visibility5214_Page(true));
+            fail("There is a component added in code that is not present in the page, " +
+                    "it should have failed when the enclosure is visible");
+        } catch (Exception e)
+        {
+            Assert.assertTrue("Exception message should correspond to a component failing to render",
+                    e.getMessage().contains("The component(s) below failed to render."));
+        }
+    }
+    
+    @Test
+    public void invisibleEnclosuresAreNotPollutingSiblingsComponentVisibility() throws Exception
+    {
+        try
+        {
+            tester.startPage(new Enclosure_Visibility5214_Page(false));
+            fail("There is a component added in code that is not present in the page, " +
+                    "it should have failed when the enclosure is not visible");
+        } catch (Exception e)
+        {
+            Assert.assertTrue("Exception message should correspond to a component failing to render",
+                    e.getMessage().contains("The component(s) below failed to render."));
+        }
+    }
+
+    public static class Enclosure_Visibility5214_Page extends WebPage implements IMarkupResourceStreamProvider{
+        private static final long serialVersionUID = 1L;
+
+        public Enclosure_Visibility5214_Page(final boolean enclosureVisible) {
+            add(new Label("foo", "bar"));
+            add(new WebMarkupContainer("baz").setVisible(enclosureVisible));
+        }
+
+        @Override
+        public IResourceStream getMarkupResourceStream(MarkupContainer container, Class<?> containerClass)
+        {
+            return new StringResourceStream("Hello <wicket:enclosure><div wicket:id=\"baz\"></div></wicket:enclosure>");
+        }
+    }
+
 }
