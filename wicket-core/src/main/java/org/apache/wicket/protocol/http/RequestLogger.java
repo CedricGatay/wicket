@@ -65,6 +65,8 @@ public class RequestLogger extends AbstractRequestLogger
 		sb.append(formatDate(rd.getStartDate()));
 		sb.append("\",duration=");
 		sb.append(rd.getTimeTaken());
+        sb.append("\",durationIncludingDetach=");
+		sb.append(rd.getTimeTakenWithDetach());
 		sb.append(",url=\"");
 		sb.append(rd.getRequestedUrl());
 		sb.append("\"");

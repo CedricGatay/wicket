@@ -273,7 +273,15 @@ public abstract class AbstractRequestLogger implements IRequestLogger
 		}
 	}
 
-	@Override
+    @Override
+    public void requestTimeWithDetach(final long timeTakenWithDetach) {
+        final RequestData requestData = getCurrentRequest();
+        if (requestData != null){
+            requestData.setTimeTakenWithDetach(timeTakenWithDetach);
+        }
+    }
+
+    @Override
 	public void sessionCreated(String sessionId)
 	{
 		liveSessions.put(sessionId, new SessionData(sessionId));

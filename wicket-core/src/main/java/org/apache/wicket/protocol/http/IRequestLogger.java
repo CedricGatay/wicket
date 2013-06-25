@@ -105,6 +105,12 @@ public interface IRequestLogger
 	 */
 	void requestTime(long timeTaken);
 
+    /**
+     * This method is called when the detach is over. This will sets the total time a request takes
+     * including the detaching phase.
+     */
+    void requestTimeWithDetach(long timeTakenWithDetach);
+
 	/**
 	 * Called to monitor removals of objects out of the {@link ISessionStore}
 	 * 
@@ -303,7 +309,8 @@ public interface IRequestLogger
 
 		private long startDate;
 		private long timeTaken;
-		private final List<String> entries = new ArrayList<String>(5);
+        private long timeTakenWithDetach;
+        private final List<String> entries = new ArrayList<String>(5);
 		private String requestedUrl;
 		private IRequestHandler eventTarget;
 		private IRequestHandler responseTarget;
@@ -318,7 +325,15 @@ public interface IRequestLogger
 		public Long getTimeTaken()
 		{
 			return timeTaken;
-		}
+        }
+
+        /**
+         * @return The time taken for this request (including detaching)
+         */
+        public long getTimeTakenWithDetach() 
+        {
+            return timeTakenWithDetach;
+        }
 
 		/**
 		 * @param activeRequest
@@ -472,9 +487,17 @@ public interface IRequestLogger
 		{
 			this.timeTaken = timeTaken;
 			startDate = System.currentTimeMillis() - timeTaken;
-		}
+        }
 
-		/**
+        /**
+         * @param timeTakenWithDetach
+         */
+        public void setTimeTakenWithDetach(final long timeTakenWithDetach) 
+        {
+            this.timeTakenWithDetach = timeTakenWithDetach;
+        }
+
+        /**
 		 * @param string
 		 */
 		public void addEntry(String string)
@@ -504,17 +527,17 @@ public interface IRequestLogger
 		public Long getSessionSize()
 		{
 			return totalSessionSize;
-		}
+        }
 
-		@Override
-		public String toString()
-		{
-			return "Request[timetaken=" + getTimeTaken() + ",sessioninfo=" + sessionInfo +
-				",sessionid=" + sessionId + ",sessionsize=" + totalSessionSize + ",request=" +
-				eventTarget + ",response=" + responseTarget + ",alteredobjects=" +
-				getAlteredObjects() + ",activerequest=" + activeRequest + "]";
-		}
-	}
+        @Override
+        public String toString() {
+            return "Request[timetaken=" + getTimeTaken() + ",timetakenWithDetach=" + getTimeTakenWithDetach() +
+                   ",sessioninfo=" + sessionInfo + ",sessionid=" + sessionId +
+                   ",sessionsize=" + totalSessionSize + ",request=" +
+                   eventTarget + ",response=" + responseTarget + ",alteredobjects=" +
+                   getAlteredObjects() + ",activerequest=" + activeRequest + "]";
+        }
+    }
 
 	/**
 	 * This interface can be implemented in a custom session object. to give an object that has more
