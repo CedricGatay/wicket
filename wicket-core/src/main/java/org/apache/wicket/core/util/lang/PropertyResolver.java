@@ -16,15 +16,18 @@
  */
 package org.apache.wicket.core.util.lang;
 
+import java.lang.reflect.AccessibleObject;
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.apache.wicket.Application;
+import org.apache.wicket.MetaDataKey;
 import org.apache.wicket.Session;
 import org.apache.wicket.WicketRuntimeException;
 import org.apache.wicket.util.convert.ConversionException;
@@ -76,6 +79,11 @@ public final class PropertyResolver
 	private final static int RESOLVE_CLASS = 2;
 
 	private final static ConcurrentHashMap<Object, IClassCache> applicationToClassesToGetAndSetters = Generics.newConcurrentHashMap(2);
+    
+    private final static MetaDataKey<Boolean> canSetAccessibleMetaDataKey = new MetaDataKey<Boolean>()
+    {
+        private static final long serialVersionUID = 1L;
+    };
 
 	private static final String GET = "get";
 	private static final String IS = "is";
@@ -235,6 +243,30 @@ public final class PropertyResolver
 		}
 		return setter.getSetter();
 	}
+
+    /**
+     * Allows to sets the PropertyResolver in strict mode :
+     *  if it encounters an non-accessible property / method, it will throw a RuntimeException
+     * @param application application for which the resolver should be strict
+     * @return this for chaining
+     */
+    public static Application useStrictPropertyResolver(final Application application)
+    {
+        application.setMetaData(canSetAccessibleMetaDataKey, Boolean.FALSE);
+        return application;
+    }
+
+    /**
+     * Allows to sets the PropertyResolver in lenient mode (default one) :
+     *  if it encounters an non-accessible property / method, it will bypass it through reflection
+     * @param application application for which the resolver should be lenient
+     * @return this for chaining
+     */
+    public static Application useLenientPropertyResolver(final Application application)
+    {
+        application.setMetaData(canSetAccessibleMetaDataKey, Boolean.TRUE);
+        return application;   
+    }
 
 	/**
 	 * Just delegating the call to the original getObjectAndGetSetter passing the object type as
@@ -554,7 +586,8 @@ public final class PropertyResolver
 				{
 					if (aField.getName().equals(expression))
 					{
-						aField.setAccessible(true);
+                        //here we don't check field accessibility, we want getter/setter
+                        aField.setAccessible(true);
 						return aField;
 					}
 				}
@@ -565,7 +598,47 @@ public final class PropertyResolver
 		return field;
 	}
 
-	/**
+	static void changeAccess(final Field field)
+	{
+		if (field != null && Modifier.isPublic(field.getModifiers()) == false)
+		{
+
+			internalChangeAccess(field);
+		}
+	}
+    
+    static void changeAccess(final Method method)
+	{
+		if (method != null && Modifier.isPublic(method.getModifiers()) == false)
+		{
+
+			internalChangeAccess(method);
+		}
+	}
+
+	private static void internalChangeAccess(AccessibleObject fieldOrMethod)
+	{
+		boolean canSetAccessible = true;
+		if (Application.exists())
+		{
+			final Boolean optionalMetaDataValue = Application.get().getMetaData(
+					canSetAccessibleMetaDataKey);
+			canSetAccessible = optionalMetaDataValue != null ? optionalMetaDataValue : true;
+		}
+		if (canSetAccessible == true)
+		{
+			fieldOrMethod.setAccessible(true);
+		}
+		else
+		{
+			throw new WicketRuntimeException("Unable to access to " + fieldOrMethod.toString()
+					+ ", this field or method is not public "
+					+ "and your application settings prevent Wicket "
+					+ "from accessing it (see PropertyResolver#useStrictPropertyResolver)");
+		}
+	}
+
+    /**
 	 * @param clz
 	 * @param expression
 	 * @return The method for the expression null if not found
@@ -1000,7 +1073,7 @@ public final class PropertyResolver
 		{
 			this.index = index;
 			getMethod = method;
-			getMethod.setAccessible(true);
+			changeAccess(getMethod);
 		}
 
 		private static Method findSetter(final Method getMethod, final Class<?> clz)
@@ -1055,7 +1128,7 @@ public final class PropertyResolver
 			}
 			if (setMethod != null)
 			{
-				setMethod.setAccessible(true);
+				changeAccess(setMethod);
 				Object converted = converter.convert(value, getMethod.getReturnType());
 				if (converted == null && value != null)
 				{
@@ -1134,7 +1207,7 @@ public final class PropertyResolver
 		MethodGetAndSet(Method getMethod, Method setMethod, Field field)
 		{
 			this.getMethod = getMethod;
-			this.getMethod.setAccessible(true);
+			changeAccess(getMethod);
 			this.field = field;
 			this.setMethod = setMethod;
 		}
@@ -1259,7 +1332,7 @@ public final class PropertyResolver
 				Method method = clz.getMethod(name, new Class[] { getMethod.getReturnType() });
 				if (method != null)
 				{
-					method.setAccessible(true);
+					changeAccess(method);
 				}
 				return method;
 			}
@@ -1368,7 +1441,7 @@ public final class PropertyResolver
 		{
 			super();
 			this.field = field;
-			this.field.setAccessible(true);
+			changeAccess(field);
 		}
 
 		/**

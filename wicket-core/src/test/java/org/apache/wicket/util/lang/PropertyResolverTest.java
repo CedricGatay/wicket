@@ -37,6 +37,7 @@ import org.apache.wicket.util.convert.ConversionException;
 import org.apache.wicket.util.convert.IConverter;
 import org.apache.wicket.util.convert.converter.AbstractConverter;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -67,6 +68,7 @@ public class PropertyResolverTest extends WicketTestCase
 	public void after()
 	{
 		PropertyResolver.destroy(tester.getApplication());
+        PropertyResolver.useLenientPropertyResolver(tester.getApplication());
 	}
 
 	/**
@@ -739,4 +741,105 @@ public class PropertyResolverTest extends WicketTestCase
 		Object actual = converter.convert(date, Long.class);
 		assertEquals(date.getTime(), actual);
 	}
+
+    @Test
+    public void testStrictModeThrowsRuntimeExceptionWhenAccessingAPrivateField() throws Exception
+    {
+        PropertyResolver.useStrictPropertyResolver(tester.getApplication());
+        NoPublicFieldsPOJO noPublicFieldsPOJO = new NoPublicFieldsPOJO();
+        try
+        {
+            PropertyResolver.getPropertyField("name", noPublicFieldsPOJO);
+            fail("Strict property resolver should have prevented us from accessing the field 'name'");
+        } catch (WicketRuntimeException e)
+        {
+            Assert.assertTrue("Exception message should contain : 'this field or method is not public'" +
+                    " but it was " + e.getMessage(),
+                    e.getMessage().contains("this field or method is not public"));
+        }
+    }
+    
+    @Test
+    public void testStrictModeThrowsRuntimeExceptionWhenAccessingAPrivateGetter() throws Exception
+    {
+        PropertyResolver.useStrictPropertyResolver(tester.getApplication());
+        NoPublicFieldsPOJO noPublicFieldsPOJO = new NoPublicFieldsPOJO();
+        try
+        {
+            PropertyResolver.getPropertyGetter("name", noPublicFieldsPOJO);
+            fail("Strict property resolver should have prevented us from accessing the getter for 'name'");
+        } catch (WicketRuntimeException e)
+        {
+            Assert.assertTrue("Exception message should contain : 'this field or method is not public'" +
+                    " but it was " + e.getMessage(),
+                    e.getMessage().contains("this field or method is not public"));
+        }
+    }
+    
+    @Test
+    public void testStrictModeThrowsRuntimeExceptionWhenAccessingAPrivateSetter() throws Exception
+    {
+        PropertyResolver.useStrictPropertyResolver(tester.getApplication());
+        NoPublicFieldsPOJO noPublicFieldsPOJO = new NoPublicFieldsPOJO();
+        try
+        {
+            PropertyResolver.getPropertySetter("name", noPublicFieldsPOJO);
+            fail("Strict property resolver should have prevented us from accessing the setter for 'name'");
+        } catch (WicketRuntimeException e)
+        {
+            Assert.assertTrue("Exception message should contain : 'this field or method is not public'" +
+                    " but it was " + e.getMessage(),
+                    e.getMessage().contains("this field or method is not public"));
+        }
+    }
+
+    @Test
+    public void testStrictModeIsOKWhenAccessingAPublicField() throws Exception
+    {
+        PropertyResolver.useStrictPropertyResolver(tester.getApplication());
+        NoPublicFieldsPOJO noPublicFieldsPOJO = new NoPublicFieldsPOJO();
+        PropertyResolver.getPropertyField("publicField", noPublicFieldsPOJO);
+    }
+    
+    @Test
+    public void testStrictModeIsOKWhenAccessingAPublicGetter() throws Exception
+    {
+        PropertyResolver.useStrictPropertyResolver(tester.getApplication());
+        NoPublicFieldsPOJO noPublicFieldsPOJO = new NoPublicFieldsPOJO();
+        PropertyResolver.getPropertyGetter("fullName", noPublicFieldsPOJO);
+    }
+    
+    @Test
+    public void testStrictModeIsOKWhenAccessingAPublicSetter() throws Exception
+    {
+        PropertyResolver.useStrictPropertyResolver(tester.getApplication());
+        NoPublicFieldsPOJO noPublicFieldsPOJO = new NoPublicFieldsPOJO();
+        PropertyResolver.getPropertySetter("fullName", noPublicFieldsPOJO);
+    }
+    
+    public static class NoPublicFieldsPOJO{
+        public String publicField;
+        private String name;
+        private String fullName;
+
+        private String getName()
+        {
+            return name;
+        }
+
+        private void setName(String name)
+        {
+            this.name = name;
+        }
+
+        public String getFullName()
+        {
+            return fullName;
+        }
+
+        public void setFullName(String fullName)
+        {
+            this.fullName = fullName;
+        }
+    }
 }
