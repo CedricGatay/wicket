@@ -18,6 +18,7 @@ package org.apache.wicket.markup;
 
 import org.apache.wicket.MarkupContainer;
 import org.apache.wicket.WicketTestCase;
+import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.apache.wicket.markup.html.WebPage;
 import org.apache.wicket.markup.html.form.Button;
 import org.apache.wicket.markup.html.link.Link;
@@ -49,7 +50,33 @@ public class ComponentTagAttributeEscapingTest extends WicketTestCase
 			response.contains("some_attribute=\"a &amp; b\""));
 	}
 
-	/**
+    /**
+     * see WICKET-5242
+     */
+    @Test
+    public void componentAttributeNotEscapedWhenEscapeTagStringsSetToFalse() throws Exception
+    {
+        tester.startPage(new DataAttributeUnescapedPage(true));
+        String response = tester.getLastResponseAsString();
+        //System.out.println(response);
+        assertTrue("Response should contains '<b>Hello world</b>' without any escaping",
+                response.contains("<b>Hello world</b>"));
+    }
+
+    /**
+     * see WICKET-5242
+     */
+    @Test
+    public void componentAttributeNotEscapedWhenEscapeTagStringsSetToTrue() throws Exception
+    {
+        tester.startPage(new DataAttributeUnescapedPage(false));
+        String response = tester.getLastResponseAsString();
+        //System.out.println(response);
+        assertTrue("Response should contains '&lt;b&gt;Hello world&lt;/b&gt;' : escaping done",
+                response.contains("&lt;b&gt;Hello world&lt;/b&gt;"));
+    }
+
+    /**
 	 * Just two distinct components with escaped characters in markup attribute.
 	 * */
 	public static class ButtonValuePage extends WebPage implements IMarkupResourceStreamProvider
@@ -95,4 +122,35 @@ public class ComponentTagAttributeEscapingTest extends WicketTestCase
 					"</html>");
 		}
 	}
+
+    /**
+     * A simple page with data-title containing HTML entities
+     */
+    public static class DataAttributeUnescapedPage extends WebPage implements IMarkupResourceStreamProvider
+    {
+
+        public DataAttributeUnescapedPage(final boolean skipEscaping)
+        {
+            add(new WebMarkupContainer("container"){
+                @Override
+                protected void onComponentTag(ComponentTag tag)
+                {
+                    super.onComponentTag(tag);
+                    tag.setEscapeTagString("data-title", !skipEscaping);
+                }
+            });
+        }
+
+        @Override
+        public IResourceStream getMarkupResourceStream(MarkupContainer container,
+                Class<?> containerClass)
+        {
+            return new StringResourceStream(
+                    "<html>"//
+                            + "<body>"//
+                            + "<span wicket:id='container' data-title='<b>Hello world</b>'>Unescaped content</span>"//
+                            + "</body>" + //
+                            "</html>");
+        }
+    }
 }

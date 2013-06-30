@@ -97,6 +97,9 @@ public class ComponentTag extends MarkupElement
 
 	/** Filters and Handlers may add their own attributes to the tag */
 	private Map<String, Object> userData;
+    
+    /** Key to escapeMarkup map (see WICKET-5242) */
+    private Map<String, Boolean> escapeMarkupMap;
 
 	/**
 	 * Automatically create a XmlTag, assign the name and the type, and construct a ComponentTag
@@ -430,12 +433,16 @@ public class ComponentTag extends MarkupElement
 		}
 		if (behaviors != null)
 		{
-			dest.behaviors = new ArrayList<Behavior>(behaviors);
+			dest.behaviors = new ArrayList<>(behaviors);
 		}
 		if (userData != null)
 		{
-			dest.userData = new HashMap<String, Object>(userData);
+			dest.userData = new HashMap<>(userData);
 		}
+        if (escapeMarkupMap != null)
+        {
+            dest.escapeMarkupMap = new HashMap<>(escapeMarkupMap);
+        }
 	}
 
 	/**
@@ -477,6 +484,23 @@ public class ComponentTag extends MarkupElement
 		putInternal(key, value);
 	}
 
+    /**
+     * Allows to control if the content of the tag should be html escaped (see WICKET-5242)
+     * Attributes values are escaped by default.
+     *
+     * @param key 
+     *              key
+     * @param escapeMarkup 
+     *              whether or not tag content should be html escaped
+     */
+    public final void setEscapeTagString(String key, boolean escapeMarkup)
+    {
+        if (escapeMarkupMap == null){
+            escapeMarkupMap = new HashMap<>();
+        }
+        escapeMarkupMap.put(key, escapeMarkup);
+    }
+
 	/**
 	 * THIS METHOD IS NOT PART OF THE PUBLIC API, DO NOT CALL IT
 	 * 
@@ -503,6 +527,19 @@ public class ComponentTag extends MarkupElement
 		}
 	}
 
+    /**
+     * @param key
+     * @return whether the tag should be escaped
+     */
+    private boolean shouldEscapeTag(String key)
+    {
+        if (escapeMarkupMap != null && escapeMarkupMap.containsKey(key) == true)
+        {
+            return escapeMarkupMap.get(key);
+        }
+        return true;
+    }
+    
 	/**
 	 * Appends specified {@code value} to the attribute
 	 * 
@@ -730,7 +767,10 @@ public class ComponentTag extends MarkupElement
 					if (value != null)
 					{
 						response.write("=\"");
-						value = Strings.escapeMarkup(value);
+                        if (shouldEscapeTag(key))
+                        {
+						    value = Strings.escapeMarkup(value);
+                        }
 						response.write(value);
 						response.write("\"");
 					}
